@@ -7,22 +7,43 @@ jobs:
   build:
     docker:
       # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
+      - image: trialproject:latest
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    working_directory: ~/repo
-
-    environment:
-      # Customize the JVM maximum heap limit
-      JVM_OPTS: -Xmx3200m
-      TERM: dumb
+    working_directory: ~/docker
 
     steps:
       - checkout
+      - run: 
+          name: "Downloading tunnel binary"
+          command: |
+            wget http://downloads.lambdatest.com/tunnel/linux/64bit/LT_Linux.zip
+      
+      - run: 
+          name: "Extracting tunnel binary"
+          command: |
+            sudo apt-get install unzip
+            unzip LT_Linux.zip
+ 
+      - run: 
+          name: "Executing tunnel binary"
+          background: true
+          command: |
+            ./LT -user $LT_USERNAME -key $LT_ACCESS_KEY
+            sleep 40
+      
+      - run: 
+          name: "Setup custom environment variables"
+          command: |
+            echo 'export LT_USERNAME= "$LT_USERNAME" >> $BASH_ENV
+ 
+      - run:
+          name: "Setup custom environment variables"
+          command: |
+            echo 'export LT_ACCESS_KEY= "$LT_ACCESS_TOKEN" >> $BASH_ENV
+ 
+      - run: # test what branch we're on.
+          name: "Here is the LT_Username : "
+          command: echo ${LT_USERNAME}    
 
       # Download and cache dependencies
       - restore_cache:
@@ -40,3 +61,27 @@ jobs:
 
       # run tests!
       - run: gradle test
+    
+
+jobs:
+  build_deploy:
+    image: 
+      ubuntu-1604:202004-01
+    steps:
+      - checkout
+      - run:
+          name: Installing AWS CLI
+          command: |
+            sudo apt-get update
+            sudo apt install python3-pip
+            sudo pip3 install awscli --upgrade
+      - run: cd ./build && add-apt-repository ppa:cwchien/gradle && apt-get update && apt upgrade gradle && gradle clean build
+      - run: aws s3 sync ~/build s3://Trial-project-main
+      ${AWS_ACCESS_KEY_ID}
+      ${AWS_SECRET_ACCESS_KEY}
+
+workflows:
+  version: 2
+  execute_bulk:
+    jobs:
+      - build_deploy
