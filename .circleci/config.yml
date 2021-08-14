@@ -63,25 +63,4 @@ jobs:
       - run: gradle test
     
 
-jobs:
-  build_deploy:
-    image: 
-      ubuntu-1604:202004-01
-    steps:
-      - checkout
-      - run:
-          name: Installing AWS CLI
-          command: |
-            sudo apt-get update
-            sudo apt install python3-pip
-            sudo pip3 install awscli --upgrade
-      - run: cd ./build && add-apt-repository ppa:cwchien/gradle && apt-get update && apt upgrade gradle && gradle clean build
-      - run: aws s3 sync ~/build s3://Trial-project-main
-      ${AWS_ACCESS_KEY_ID}
-      ${AWS_SECRET_ACCESS_KEY}
 
-workflows:
-  version: 2
-  execute_bulk:
-    jobs:
-      - build_deploy
